@@ -1,0 +1,82 @@
+version: '3'
+
+vars:
+  PROJECT_NAME: sih-ipfs
+
+tasks:
+  dev-setup:
+    desc: "Setup development environment"
+    summary: |
+      Installs all the required tools for development. Installs
+        - goimports
+        - golangci-lint
+        - gosec
+        - cobra
+    cmds:
+      - go install golang.org/x/tools/cmd/goimports@latest
+      - go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+      - go install github.com/securego/gosec/v2/cmd/gosec@latest
+      - go install github.com/spf13/cobra-cli@latest
+    silent: true
+
+  deps:
+    desc: "Dependencies Check"
+    summary: |
+      Checks if all the dependencies are installed and if there are any unused dependencies in the project.
+    cmds:
+      - go mod download
+      - go mod tidy
+      - go mod verify
+      - go mod vendor
+      -
+  fmt:
+    desc: "Format Check"
+    summary: |
+        Checks if all the files are formatted properly and formats the files if they are not formatted properly.
+    cmds:
+      - goimports -w -e $(find . -type f -name '*.go' -not -path "*/vendor/*")
+
+  lint:
+    desc: "Lint Check"
+    summary: |
+      Checks if there are any linting errors in the project and fixes the errors if possible.
+    cmds:
+      - cmd: golangci-lint run --fix --timeout=10m
+        ignore_error: true
+      - go vet ./...
+
+  test:
+    desc: "Run all tests with coverage"
+    summary: |
+      Runs go tests with coverage for ./pkg/...
+    cmds:
+      - go test -coverpkg=./pkg/... -coverprofile=covertest.out -covermode=atomic -count=1 ./... -race -parallel 10
+      - go tool cover -html=covertest.out -o covertest.html
+
+  run:
+    desc: "Run the main.go file"
+    summary: |
+      Runs the main.go file in the project.
+    cmds:
+      - go run main.go
+
+  build:
+    desc: "Builds the binary"
+    summary: |
+      Builds the binary for the project.
+    cmds:
+      - go build -o bin/{{ .PROJECT_NAME }} main.go
+
+  sec:
+    desc: "Run security checks"
+    summary: |
+      Runs security checks on the project.
+    cmds:
+      - gosec ./...
+
+  clean:
+    desc: cleans go mod cache
+    summary: |
+      Cleans the go mod cache.
+    cmds:
+      - go clean -cache -modcache -i -r
